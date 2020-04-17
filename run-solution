@@ -4,6 +4,9 @@ import os
 import argparse
 import subprocess
 
+# https://www.7-cpu.com/cpu/Skylake.html
+# Branch misprediction penalty = 16.5 cycles average
+
 
 def shell(prog):
     return subprocess.run(prog, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -11,6 +14,8 @@ def shell(prog):
 
 def run_profiler(prog, proc):
     callgrind = shell(['valgrind', '--tool=callgrind',
+                       '--branch-sim=yes',
+                       '--cache-sim=yes',
                        '--toggle-collect=' + proc,
                        '--callgrind-out-file=callgrind.out'] + prog)
     if callgrind.returncode:
@@ -20,14 +25,23 @@ def run_profiler(prog, proc):
     annotate = shell(['callgrind_annotate', 'callgrind.out'])
 
     section = None
+    columns = None
     procinst = {}
     for line in annotate.stdout.decode().splitlines():
         if not line or line.startswith('---'):
             continue
         if section == 'Ir':
-            insn, loc, _ = line.split()
-            procinst[loc] = int(insn.replace(',', ''))
+            line = line.strip().replace(',', '').split()
+            info = {}
+            for col, field in zip(columns, line):
+                try:
+                    info[col] = int(field)
+                except ValueError:
+                    info[col] = field
+            loc = info['file:function']
+            procinst[loc] = info
         if 'Ir' in line and 'file:function' in line:
+            columns = line.strip().split()
             section = 'Ir'
 
     os.remove('callgrind.out')
@@ -52,13 +66,16 @@ if __name__ == '__main__':
     source, procedure = args.procedure.split(':')
 
     profile = run_profiler(args.program, procedure)
-    insns = profile.get(args.procedure, 0)
+    info = profile.get(args.procedure, 0)
+    insns = info['Ir']
     if insns == 0:
         raise SystemExit('Procedure "%s" not found in "%s"!' % (
                          procedure, source))
     over_limit = args.max_insns and insns > args.max_insns
     if over_limit or args.verbose:
-        print('Executed instructions: %d.' % insns)
+        print('Executed instructions: %d' % insns)
+        if 'Bc' in info:
+            print('Mispredicted branches: %s/%s' % (info['Bcm'], info['Bc']))
     if over_limit:
         raise SystemExit('Your program takes to much time to run!\n'
                          'Exceeded limit of executed instructions: %d!' %
