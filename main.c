@@ -94,8 +94,12 @@ int main(int argc, char *argv[]) {
 
     uint64_t seed = tv.tv_sec + tv.tv_usec * 1e6;
 
-    for (int i = 0; i < times; i++)
-      run(random_u64(&seed));
+    for (int i = 0; i < times; i++) {
+      uint64_t val = random_u64(&seed);
+      uint64_t mask = random_u64(&seed);
+      val &= (1UL << (mask & 63)) - 1;
+      run(val);
+    }
 
     return EXIT_SUCCESS;
   }
