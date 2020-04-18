@@ -3,6 +3,10 @@ CFLAGS = -Og -Wall
 LDFLAGS = 
 ASFLAGS = -g
 
+# External tools
+VALGRIND = /usr/bin/valgrind
+MCA = /usr/bin/llvm-mca-8
+
 # Configurable parameters
 PROCEDURE ?= clz.s:clz
 ILIMIT ?= 48
@@ -18,11 +22,15 @@ RUN = ./run-solution $(OPTS) --procedure $(PROCEDURE) \
                      --max-insns $(MAXINSNS) $(EXTRA) -- ./main
 INSTALL = sudo apt-get install -q=2 --no-install-recommends
 
-.packages:
-	 $(INSTALL) valgrind llvm-8
-	 touch $@
+all: test-random
 
-check: .packages main
+$(VALGRIND):
+	$(INSTALL) valgrind
+
+$(MCA):
+	$(INSTALL) llvm-8
+
+check: main $(VALGRIND) $(MCA)
 	$(CHECK)
 
 main: main.o clz.o
@@ -50,7 +58,7 @@ test-bonus: CHECK += --min-ipc $(MINIPC)
 test-bonus: check
 
 clean:
-	rm -f .packages main *.o *.out *~
+	rm -f main *.o *.out *~
 
 .PHONY: check clean test-1 test-2 test-3 test-4 test-random test-all
 

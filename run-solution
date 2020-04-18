@@ -35,6 +35,8 @@ def run_profiler(prog, proc):
             info = {}
             for col, field in zip(columns, line):
                 try:
+                    if field == '.':
+                        field = 0
                     info[col] = int(field)
                 except ValueError:
                     info[col] = field
