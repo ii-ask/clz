@@ -56,11 +56,13 @@ if __name__ == '__main__':
     parser.add_argument('--procedure', type=str,
                         help=('source file name and procedure name '
                               'separated by colon'))
+    parser.add_argument('--max-branch-miss', type=float, default=None,
+                        help=('maximum branch missprediction rate'))
     parser.add_argument('--max-insns', type=int,
                         help=('maximum number of executed instructions '
                               'for given procedure name and source file'))
-    parser.add_argument('--verbose', action='store_true',
-                        help='print number of executed instructions')
+    parser.add_argument('--quiet', action='store_true',
+                        help='do not print profile information')
     parser.add_argument('program', type=str, nargs='+',
                         help='print analysis information')
     args = parser.parse_args()
@@ -73,12 +75,21 @@ if __name__ == '__main__':
     if insns == 0:
         raise SystemExit('Procedure "%s" not found in "%s"!' % (
                          procedure, source))
-    over_limit = args.max_insns and insns > args.max_insns
-    if over_limit or args.verbose:
+
+    if not args.quiet:
         print('Executed instructions: %d' % insns)
-        if 'Bc' in info:
-            print('Mispredicted branches: %s/%s' % (info['Bcm'], info['Bc']))
-    if over_limit:
+    if args.max_insns and insns > args.max_insns:
         raise SystemExit('Your program takes to much time to run!\n'
                          'Exceeded limit of executed instructions: %d!' %
                          args.max_insns)
+
+    if 'Bc' in info:
+        branch_miss = info['Bcm'] / (info['Bc'] or 1)
+        if not args.quiet:
+            print('Mispredicted branches: %s/%s (%s%%)' % (
+                info['Bcm'], info['Bc'], branch_miss * 100.0))
+        if args.max_branch_miss and branch_miss > args.max_branch_miss:
+            raise SystemExit('Your program runs inefficienly due to too many '
+                             'conditional branches being mispredicted!\n'
+                             'Exceeded limit of branch missprediction: %s%%!' %
+                             (args.max_branch_miss * 100.0))

@@ -9,16 +9,15 @@ MCA = /usr/bin/llvm-mca-8
 
 # Configurable parameters
 PROCEDURE ?= clz.s:clz
-ILIMIT ?= 48
-MAXSIZE ?= 192
-BADINSNS ?= '*cnt,call*'
-MINIPC ?= 1.87
+ILIMIT ?= 50
+MAXSIZE ?= 256
+BADINSNS ?= '*cnt*,call*'
 
 MAXINSNS = $(ILIMIT)
 
-CHECK = ./check-solution $(OPTS) --procedure $(PROCEDURE) \
+CHECK = ./check-solution --procedure $(PROCEDURE) \
 	                 --max-size $(MAXSIZE) --bad-insns $(BADINSNS) $(EXTRA)
-RUN = ./run-solution $(OPTS) --procedure $(PROCEDURE) \
+RUN = ./run-solution --procedure $(PROCEDURE) \
                      --max-insns $(MAXINSNS) $(EXTRA) -- ./main
 INSTALL = sudo apt-get install -q=2 --no-install-recommends
 
@@ -53,9 +52,6 @@ test-random: check
 	$(RUN) -r 1000
 
 test-all: test-1 test-2 test-3 test-4 test-random
-
-test-bonus: CHECK += --min-ipc $(MINIPC)
-test-bonus: check
 
 clean:
 	rm -f main *.o *.out *~

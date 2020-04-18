@@ -78,8 +78,8 @@ if __name__ == '__main__':
     parser.add_argument('--procedure', type=str,
                         help=('source file name and procedure name '
                               'separated by colon'))
-    parser.add_argument('--verbose', action='store_true',
-                        help='print analysis information')
+    parser.add_argument('--quiet', action='store_true',
+                        help='do not print analysis information')
     args = parser.parse_args()
 
     source, procedure = args.procedure.split(':')
@@ -90,11 +90,10 @@ if __name__ == '__main__':
     data_size = sects.get('.data', 0) + sects.get('.rodata', 0)
     bss_size = sects.get('.bss', 0)
 
-    too_big = text_size + data_size + bss_size > args.max_size
-    if too_big or args.verbose:
+    if not args.quiet:
         print('Sections size in "%s" object file: text=%d, data=%d, bss=%d'
               % (objfile, text_size, data_size, bss_size))
-    if too_big:
+    if text_size + data_size + bss_size > args.max_size:
         raise SystemExit('Your program takes too much space!\nExceeded limit '
                          'of sections size: %d!' % args.max_size)
 
@@ -111,12 +110,13 @@ if __name__ == '__main__':
     iters = mca['Iterations']
     insns = mca['Instructions']
     totcyc = mca['Total Cycles']
-    too_slow = args.min_ipc and ipc < args.min_ipc
-    if too_slow or args.verbose:
+
+    if not args.quiet:
         print('Instructions per cycle: %s' % ipc)
         print('Cycles per iteration: %s' % (totcyc / iters))
         print('Instructions per iteration: %s' % (insns / iters))
-    if too_slow:
+
+    if args.min_ipc and ipc < args.min_ipc:
         raise SystemExit('Your program uses processor resources '
                          'inefficiently!\nAcceptance limit for '
                          'instruction per cycle is %s!' % args.min_ipc)
